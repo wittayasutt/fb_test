@@ -22,7 +22,9 @@
 
   	data() {
   		return {
+  			APPID: '131695504135597',
   			login: false,
+  			accessToken: null,
   			name: ''
   		}
   	},
@@ -31,9 +33,26 @@
   			FB.login()
   		},
   		fbTest() {
-  			FB.api('/me?fields=id,name,picture', function(response) {
+  			FB.api('/me', { fields: 'id, name, picture' }, response => {
   				console.log(response)
   			})
+
+  			FB.api(
+  				`/v2.11/${this.APPID}/subscriptions`,
+  				'post',
+  				{
+  					object: 'user',
+  					callback_url: 'https://hidden-spire-18590.herokuapp.com/callback/',
+  					fields: 'contact_email',
+  					verify_token: 'facebooktestwebhook',
+  					access_token: this.accessToken
+  				},
+  				response => {
+  					console.log(response)
+  				}
+  			)
+
+  			console.log('accessToken', this.accessToken)
   		},
   		fbLogout() {
   			FB.logout()
@@ -44,7 +63,7 @@
 
   		window.fbAsyncInit = function() {
   			FB.init({
-  				appId: '131695504135597',
+  				appId: _this.APPID,
   				autoLogAppEvents: true,
   				xfbml: true,
   				version: 'v2.11'
@@ -53,6 +72,7 @@
   			FB.getLoginStatus(function(response) {
   				if (response.status === 'connected') {
   					_this.login = true
+  					_this.accessToken = response.authResponse.accessToken
 
   					FB.api('/me', function(response) {
   						_this.name = response.name
