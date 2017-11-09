@@ -23,8 +23,9 @@
   	data() {
   		return {
   			APPID: '131695504135597',
-  			login: false,
+  			APPSECRET: 'e80ffea5de9c7931fcdf0c7d5aefe3be',
   			accessToken: null,
+  			login: false,
   			name: ''
   		}
   	},
@@ -77,6 +78,22 @@
   					FB.api('/me', function(response) {
   						_this.name = response.name
   					})
+
+  					console.log('_this.APPID', _this.APPID)
+  					console.log('_this.APPSECRET', _this.APPSECRET)
+  					console.log('_this.accessToken', _this.accessToken)
+
+  					FB.api(
+  						`/oauth/access_token`,
+  						{
+  							client_id: _this.APPID,
+  							client_secret: _this.APPSECRET,
+  							grant_type: 'client_credentials'
+  						},
+  						response => {
+  							console.log(response)
+  						}
+  					)
   				} else {
   					_this.login = false
   				}
