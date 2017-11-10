@@ -4,7 +4,35 @@
       <h4>
         Hello, {{name}}
       </h4><br>
-      <button @click="fbTest">Test API</button>
+      <input class="search" type="text" placeholder="Find your group..." v-model="groupSearch">
+      <ul>
+        <div v-for="(item, index) in groupResult" :key="index">
+          <div class="result" @click="groupSelected(item.id)">[{{item.privacy}}] {{ item.name }}
+          </div>
+          <div class="border" v-if="item.id === groupID">
+            <div v-for="(item2, index2) in feed" :key="index2">
+              <div class="feed" @click="postSelected(item2.id)">
+                {{ item2.message }}
+                <div v-if="item2.picture">
+                  <img class="picture" :src="item2.picture" alt="picture">
+                </div>
+              </div>
+              <div class="border2" v-if="item2.id === postID">
+                <div v-for="(item3, index3) in comment" :key="index3">
+                  <div class="comment">
+                    {{ item3.message }}
+                  </div>
+                  <div class="reply" v-for="(item4, index4) in item3.reply" :key="index4">
+                    > {{item4.message}}
+                  </div>
+                  <div class="commentline"></div>
+                </div>
+              </div>
+              <div class="feedline"></div>
+            </div>
+          </div>
+        </div>
+      </ul>
     </div>
     <div v-else>
       <button @click="fbLogin">Login with Facebook</button>
@@ -24,39 +52,62 @@
   		return {
   			APPID: '131695504135597',
   			APPSECRET: 'e80ffea5de9c7931fcdf0c7d5aefe3be',
-  			accessToken: null,
   			login: false,
-  			name: ''
+  			accessToken: null,
+  			name: '',
+  			groupSearch: '',
+  			groupResult: [],
+  			groupID: null,
+  			feed: [],
+  			postID: null,
+  			comment: []
   		}
   	},
   	methods: {
   		fbLogin() {
   			FB.login()
   		},
-  		fbTest() {
-  			FB.api('/me', { fields: 'id, name, picture' }, response => {
-  				console.log(response)
-  			})
-
-  			FB.api(
-  				`/v2.11/${this.APPID}/subscriptions`,
-  				'post',
-  				{
-  					object: 'user',
-  					callback_url: 'https://hidden-spire-18590.herokuapp.com/callback/',
-  					fields: 'contact_email',
-  					verify_token: 'facebooktestwebhook',
-  					access_token: this.accessToken
-  				},
-  				response => {
-  					console.log(response)
-  				}
-  			)
-
-  			console.log('accessToken', this.accessToken)
-  		},
   		fbLogout() {
   			FB.logout()
+  		},
+  		groupSelected(id) {
+  			this.groupID = id
+
+  			FB.api(`/${id}/feed`, { accessToken: this.accessToken }, response => {
+  				console.log('response', response)
+  				this.feed = response.data
+
+  				this.feed.forEach((post, index) => {
+  					FB.api(`/${post.id}`, { fields: 'picture' }, response => {
+  						if (response.picture) {
+  							this.feed[index].picture = response.picture
+  							this.$forceUpdate()
+  						}
+  					})
+  				})
+  			})
+  		},
+  		postSelected(id) {
+  			this.postID = id
+
+  			FB.api(`/${id}/comments`, {}, response => {
+  				this.comment = response.data
+
+  				this.comment.forEach((comment, index) => {
+  					FB.api(`/${comment.id}/comments`, {}, response => {
+  						this.comment[index].reply = response.data
+  						this.$forceUpdate()
+  					})
+  				})
+  			})
+  		}
+  	},
+  	watch: {
+  		groupSearch: function(search) {
+  			FB.api('/search', { type: 'group', q: search }, response => {
+  				this.groupResult = response.data
+  				this.$forceUpdate()
+  			})
   		}
   	},
   	mounted() {
@@ -79,21 +130,36 @@
   						_this.name = response.name
   					})
 
-  					console.log('_this.APPID', _this.APPID)
-  					console.log('_this.APPSECRET', _this.APPSECRET)
-  					console.log('_this.accessToken', _this.accessToken)
+  					FB.api(`/${response.authResponse.userID}/permissions`, function(
+  						response
+  					) {
+  						console.log('response', response)
+  					})
 
-  					FB.api(
-  						`/oauth/access_token`,
-  						{
-  							client_id: _this.APPID,
-  							client_secret: _this.APPSECRET,
-  							grant_type: 'client_credentials'
-  						},
-  						response => {
-  							console.log(response)
-  						}
-  					)
+  					// GET https://graph.accountkit.com/v1.2/access_token?grant_type=authorization_code&code=<authorization_code>&access_token=AA|<facebook_app_id>|<app_secret>
+  					// FB.api(
+  					// 	`/access_token`,
+  					// 	{
+  					// 		grant_type: 'authorization_code',
+  					// 		code: _this.accessToken,
+  					// 		access_token: 'AA'
+  					// 	},
+  					// 	function(response) {
+  					// 		console.log(response)
+  					// 	}
+  					// )
+
+  					// FB.api(
+  					// 	`/oauth/access_token`,
+  					// 	{
+  					// 		client_id: _this.APPID,
+  					// 		client_secret: _this.APPSECRET,
+  					// 		redirect_uri: 'http://localhost:3000/'
+  					// 	},
+  					// 	function(response) {
+  					// 		console.log(response)
+  					// 	}
+  					// )
   				} else {
   					_this.login = false
   				}
@@ -143,5 +209,63 @@
 
   .links {
   	padding-top: 15px;
+  }
+
+  .search {
+  	margin-bottom: 20px;
+  }
+
+  .result {
+  	color: blue;
+  	cursor: pointer;
+  }
+
+  .result:hover {
+  	color: purple;
+  }
+
+  .border {
+  	border: 1px solid blue;
+  	margin: 10px;
+  	padding: 5px;
+  }
+
+  .feed {
+  	color: green;
+  	padding: 15px;
+  	cursor: pointer;
+  }
+
+  .feed:hover {
+  	color: purple;
+  }
+
+  .feedline {
+  	border-bottom: 1px solid blue;
+  }
+
+  .picture {
+  	width: 20%;
+  	margin-top: 20px;
+  }
+
+  .border2 {
+  	border: 1px solid green;
+  	margin: 10px;
+  	padding: 5px;
+  }
+
+  .comment {
+  	color: red;
+  	padding: 15px;
+  }
+
+  .commentline {
+  	border-bottom: 1px solid green;
+  }
+
+  .reply {
+  	color: pink;
+  	padding: 5px;
   }
 </style>
