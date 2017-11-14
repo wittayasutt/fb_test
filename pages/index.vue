@@ -50,8 +50,8 @@
 
   	data() {
   		return {
-  			APPID: '131695504135597',
-  			APPSECRET: 'e80ffea5de9c7931fcdf0c7d5aefe3be',
+  			APPID: '891066087729524',
+  			APPSECRET: 'c380a169180c54f28e6988cd44b26435',
   			login: false,
   			accessToken: null,
   			name: '',
